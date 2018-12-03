@@ -12,22 +12,22 @@ class Query():
         # self.cache = redis.Redis(connection_pool=self.pool)
 
     def login(self, email, pwd):
-    	results = self.cursor.execute("select id, email, password from `rss_users` where `email` = '%s'"%str(email))
+    	results = self.cursor.execute("select id, email, password, name from `rss_users` where `email` = '%s'"%str(email))
     	user = self.cursor.fetchone()
     	if user != None and user[2] == pwd:
-    		return {'id':user[0], 'email':user[1]}
+    		return {'id':user[0], 'email':user[1], 'name':user[3]}
     	else:
     		return False
 
-    def register(self, email, pwd):
+    def register(self, email, pwd, name):
     	results = self.cursor.execute("select id from `rss_users` where `email` = '%s'"%str(email))
     	exist = self.cursor.fetchone()
     	if exist != None:
     		return {'code':500, 'message':'Email address already exists!'}
     	else:
-    		self.cursor.execute("insert into `rss_users` (`email`, `password`) values ('%s','%s')"%(str(email),str(pwd)))
+    		self.cursor.execute("insert into `rss_users` (`email`, `password`, `name`) values ('%s','%s', '%s')"%(str(email), str(pwd), str(name)))
     		self.library.commit()
-    		return {'code':200, 'message':'Got it'}
+    		return {"code":200, "message":"Got it", "data":{"id":"%d"%self.cursor.lastrowid}}
 
     def addRss(self, url, user):
 		try:
@@ -60,6 +60,12 @@ class Query():
 				print 'insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ("%s",\'%s\',\'%s\',"%s","%s")'%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time())))
 				self.cursor.execute("insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ('%s','%s','%s','%s','%s')"%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time()))))
     			self.library.commit()
+
+    def longToInt(self,value):
+        if value > 2147483647 :
+            return (value & (2 ** 31 - 1))
+        else :
+            return value
 
     def __del__(self):
     	self.cursor.close()

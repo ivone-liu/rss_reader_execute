@@ -4,7 +4,7 @@ import tornado.ioloop
 import tornado.web
 import sys, json, hashlib, dataProcess
 reload(sys)
-sys.setdefaultencoding('utf-8')
+sys.setdefaultencoding("utf-8")
 
 #测试保留模块
 class HelloHandler(tornado.web.RequestHandler):
@@ -14,34 +14,36 @@ class HelloHandler(tornado.web.RequestHandler):
 #登入模块
 class SignInHandler(tornado.web.RequestHandler):
     def post(self):
-        email = self.get_argument('email')
-        password = self.get_argument('password')
+        email = self.get_argument("email")
+        password = self.get_argument("password")
         pwdType = hashlib.md5()
-        pwdType.update(password+'reader')
+        pwdType.update(password+"reader")
         encode_pwd = pwdType.hexdigest()
         login = dataProcess.Query().login(email, encode_pwd)
         if login == False:
-            result = json.dumps({'code':'500','message':'Failed to Sign In'})
+            result = json.dumps({"code":"500","message":"Failed to Sign In"})
         else:
-            result = json.dumps({'code':'200','message':'Got it', 'data':login})
+            result = json.dumps({"code":"200","message":"Got it", "data":login})
         self.write("%s"%str(result))
 
 #注册模块
 class RegHandler(tornado.web.RequestHandler):  
     def post(self):
-        email = self.get_argument('email')
-        password = self.get_argument('password')
+        email = self.get_argument("email")
+        password = self.get_argument("password")
+        name = self.get_argument("name")
         pwdType = hashlib.md5()
-        pwdType.update(password+'reader')
+        pwdType.update(password+"reader")
         encode_pwd = pwdType.hexdigest()
-        register = dataProcess.Query().register(email, encode_pwd)
-        self.write("%s"%str(register))
+        register = dataProcess.Query().register(email, encode_pwd, name)
+        result = json.dumps(register)
+        self.write("%s"%str(result))
 
 #添加RSS模块
 class AddRssSourceHandler(tornado.web.RequestHandler):  
     def post(self):
-        link = self.get_argument('link')
-        user = self.get_argument('user')
+        link = self.get_argument("link")
+        user = self.get_argument("user")
         addRss = dataProcess.Query().addRss(link, user)
         result = json.dumps(addRss)
         self.write("%s"%str(result))
@@ -52,7 +54,7 @@ class GetArticleFromSourceHandler(tornado.web.RequestHandler):
         last_time = self.get_argument("last")
         channel = self.get_argument("channel")
         data = dataProcess.Query().getArticles(last_time, channel)
-        result = json.dumps({'code':'200','message':'Got it','data':data})
+        result = json.dumps({"code":"200","message":"Got it","data":data})
         self.write("%s"%str(result))
 
 #苦工，起到遍历作用
