@@ -1,6 +1,6 @@
 #encoding=utf-8
 
-import MySQLdb, sys, time, config
+import MySQLdb, sys, time, config, urllib, urllib2, xml.dom.minidom
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -14,7 +14,6 @@ class Query():
     def login(self, email, pwd):
     	results = self.cursor.execute("select id, email, password from `rss_users` where `email` = '%s'"%str(email))
     	user = self.cursor.fetchone()
-    	self.cursor.close()
     	if user != None and user[2] == pwd:
     		return {'id':user[0], 'email':user[1]}
     	else:
@@ -28,5 +27,40 @@ class Query():
     	else:
     		self.cursor.execute("insert into `rss_users` (`email`, `password`) values ('%s','%s')"%(str(email),str(pwd)))
     		self.library.commit()
-    		self.cursor.close()
     		return {'code':200, 'message':'Got it'}
+
+    def addRss(self, url, user):
+		try:
+			self.cursor.execute("insert into `rss_subscribe` (`user_id`, `rss_source`, `add_time`, `last_update`) values ('%s','%s','%s','%s')"%(str(user),str(url), str(int(time.time())), str(int(time.time()))))
+			self.library.commit()
+			return {'code':'200', 'message':'已订阅！'}
+		except:
+			return {'code':'200', 'message':'已订阅！'}
+
+    def getArticles(self, last_update, channel_id):
+    	self.cursor.execute("select * `rss_data` where (`channel_id`='%s' and `create_time` > %s)"%(str(channel_id),str(last_update)))
+    	data = self.cursor.fetchmany(results)
+    	return data
+
+    def loop(self):
+    	subscribe = self.cursor.execute("select id, rss_source from `rss_subscribe`")
+    	channels = self.cursor.fetchmany(subscribe)
+    	for channel in channels:
+			release = urllib2.urlopen('http://rss.zhimo.ink/pixiv/ranking/week').read()
+			doc = xml.dom.minidom.parseString(release)
+			items = doc.documentElement.getElementsByTagName("item")
+			for item in items:
+				title = item.getElementsByTagName("title")
+				title = title[0].childNodes[0].data
+				desc = item.getElementsByTagName("description")
+				desc = desc[0].childNodes[0].data
+				link = item.getElementsByTagName("link")
+				link = link[0].childNodes[0].data
+				print title
+				print 'insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ("%s",\'%s\',\'%s\',"%s","%s")'%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time())))
+				self.cursor.execute("insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ('%s','%s','%s','%s','%s')"%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time()))))
+    			self.library.commit()
+
+    def __del__(self):
+    	self.cursor.close()
+    	self.library.close()

@@ -39,18 +39,26 @@ class RegHandler(tornado.web.RequestHandler):
 
 #添加RSS模块
 class AddRssSourceHandler(tornado.web.RequestHandler):  
-    def get(self):
-        print self.get_argument()
+    def post(self):
+        link = self.get_argument('link')
+        user = self.get_argument('user')
+        addRss = dataProcess.Query().addRss(link, user)
+        result = json.dumps(addRss)
+        self.write("%s"%str(result))
 
 #读取新数据模块
 class GetArticleFromSourceHandler(tornado.web.RequestHandler):  
     def get(self):
-        print self.get_argument()
+        last_time = self.get_argument("last")
+        channel = self.get_argument("channel")
+        data = dataProcess.Query().getArticles(last_time, channel)
+        result = json.dumps({'code':'200','message':'Got it','data':data})
+        self.write("%s"%str(result))
 
 #苦工，起到遍历作用
 class LaborHandler(tornado.web.RequestHandler):    
     def get(self):
-        print self.get_argument()
+        dataProcess.Query().loop()
 
 #路由设置
 def make_app():
