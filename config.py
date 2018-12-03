@@ -10,4 +10,4 @@ def getDatabasePwd():
     return '1234'
 
 def getDatabase():
-    return 'rss_reader'
+    return 'api'
