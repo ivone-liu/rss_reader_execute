@@ -29,24 +29,32 @@ class Query():
     		self.library.commit()
     		return {"code":200, "message":"Got it", "data":{"id":"%d"%self.cursor.lastrowid}}
 
-    def addRss(self, url, user):
+    def addRss(self, url, user, title, desc):
 		try:
-			self.cursor.execute("insert into `rss_subscribe` (`user_id`, `rss_source`, `add_time`, `last_update`) values ('%s','%s','%s','%s')"%(str(user),str(url), str(int(time.time())), str(int(time.time()))))
+			self.cursor.execute("insert into `rss_subscribe` (`user_id`, `rss_source`, `title`, `desc`, `add_time`, `last_update`) values ('%s','%s','%s','%s','%s','%s')"%(str(user), str(url), str(title), str(desc), str(int(time.time())), str(int(time.time()))))
 			self.library.commit()
-			return {'code':'200', 'message':'已订阅！'}
+			return {"code":"200", "message":"已订阅！"}
 		except:
-			return {'code':'200', 'message':'已订阅！'}
+			return {"code":"200", "message":"已订阅！"}
 
     def getArticles(self, last_update, channel_id):
-    	self.cursor.execute("select * `rss_data` where (`channel_id`='%s' and `create_time` > %s)"%(str(channel_id),str(last_update)))
+    	results = self.cursor.execute("select * from `rss_data` where `channel_id`='%s' and `create_time` > %s"%(str(channel_id),str(last_update)))
     	data = self.cursor.fetchmany(results)
-    	return data
+    	news = {}
+    	for i in data:
+    		item = {}
+    		item['title'] = i[2]
+    		item['desc'] = i[3]
+    		item['link'] = i[4]
+    		item['channel_id'] = i[1]
+    		news['item_%s'%str(i[0])] = item
+    	return news
 
     def loop(self):
     	subscribe = self.cursor.execute("select id, rss_source from `rss_subscribe`")
     	channels = self.cursor.fetchmany(subscribe)
     	for channel in channels:
-			release = urllib2.urlopen('http://rss.zhimo.ink/pixiv/ranking/week').read()
+			release = urllib2.urlopen(channel[1]).read()
 			doc = xml.dom.minidom.parseString(release)
 			items = doc.documentElement.getElementsByTagName("item")
 			for item in items:
@@ -56,10 +64,12 @@ class Query():
 				desc = desc[0].childNodes[0].data
 				link = item.getElementsByTagName("link")
 				link = link[0].childNodes[0].data
-				print title
-				print 'insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ("%s",\'%s\',\'%s\',"%s","%s")'%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time())))
-				self.cursor.execute("insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ('%s','%s','%s','%s','%s')"%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time()))))
-    			self.library.commit()
+				# print 'insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ("%s",\'%s\',\'%s\',"%s","%s")'%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time())))
+				try:
+					self.cursor.execute('insert into `rss_data` (`channel_id`, `title`, `desc`, `link`, `create_time`) values ("%s",\'%s\',\'%s\',"%s","%s")'%(str(channel[0]),str(title), str(desc), str(link), str(int(time.time()))))
+					self.library.commit()
+				except:
+					continue
 
     def longToInt(self,value):
         if value > 2147483647 :

@@ -44,7 +44,9 @@ class AddRssSourceHandler(tornado.web.RequestHandler):
     def post(self):
         link = self.get_argument("link")
         user = self.get_argument("user")
-        addRss = dataProcess.Query().addRss(link, user)
+        title = self.get_argument("title")
+        desc = self.get_argument("desc")
+        addRss = dataProcess.Query().addRss(link, user, title, desc)
         result = json.dumps(addRss)
         self.write("%s"%str(result))
 
