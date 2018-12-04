@@ -2,6 +2,9 @@
 
 import tornado.ioloop
 import tornado.web
+from tornado import gen
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor
 import sys, json, hashlib, dataProcess
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -41,27 +44,47 @@ class RegHandler(tornado.web.RequestHandler):
 
 #添加RSS模块
 class AddRssSourceHandler(tornado.web.RequestHandler):  
+    executor = ThreadPoolExecutor(40)
+    @gen.coroutine
     def post(self):
         link = self.get_argument("link")
         user = self.get_argument("user")
         title = self.get_argument("title")
         desc = self.get_argument("desc")
-        addRss = dataProcess.Query().addRss(link, user, title, desc)
-        result = json.dumps(addRss)
+        add = yield self.execute(link, user, title, desc)
+        result = json.dumps(add)
         self.write("%s"%str(result))
+
+    @run_on_executor
+    def execute(self, link, user, title, desc):
+        addRss = dataProcess.Query().addRss(link, user, title, desc)
+        return addRss
+
 
 #读取新数据模块
 class GetArticleFromSourceHandler(tornado.web.RequestHandler):  
+    executor = ThreadPoolExecutor(40)
+    @gen.coroutine
     def get(self):
         last_time = self.get_argument("last")
         channel = self.get_argument("channel")
-        data = dataProcess.Query().getArticles(last_time, channel)
+        data = yield self.execute(last_time, channel)
         result = json.dumps({"code":"200","message":"Got it","data":data})
         self.write("%s"%str(result))
 
+    @run_on_executor
+    def execute(self, last_time, channel):
+        data = dataProcess.Query().getArticles(last_time, channel)
+        return data
+
 #苦工，起到遍历作用
 class LaborHandler(tornado.web.RequestHandler):    
+    executor = ThreadPoolExecutor(40)
+    @gen.coroutine
     def get(self):
+        yield self.execute()
+        
+    def execute(self):
         dataProcess.Query().loop()
 
 #路由设置
